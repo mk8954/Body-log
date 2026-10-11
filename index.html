@@ -219,7 +219,7 @@ const SC=['1','2','3','4','5'];
 const F={
   sleep:{t:'Going to sleep',f:[{k:'note',l:'Anything on your mind? (optional)',t:'text'}]},
   wake:{t:'Woke up',f:[
-    {k:'kind',l:'Which wake-up?',t:'chips',o:['Night wake-up','Morning (final)'],r:1},
+    {k:'kind',l:'Which wake-up?',t:'chips',o:['Night wake-up','Morning (final)','After nap / day sleep'],r:1},
     {k:'reason',l:'Why did you wake up?',t:'chips',o:['Urine','Thirst','Heat/cold','Noise','Bad dream','Worry/thoughts','Pain/discomfort','Hunger','No reason']},
     {k:'note',l:'Details (optional)',t:'text'}]},
   food:{t:'Food',f:[
@@ -268,14 +268,14 @@ let cur=dayKey(Date.now());
 const eventsOn=k=>db.events.filter(e=>dayKey(e.ts)===k);
 function sleepFor(w){let best=null;for(const e of db.events){if(e.type==='sleep'&&e.ts<w.ts&&w.ts-e.ts<18*36e5&&(!best||e.ts>best.ts))best=e}return best?(w.ts-best.ts)/36e5:null}
 function summary(k){
-  const s={water:0,stool:0,urine:0,ex:0,priv:0,nights:0,sym:0,sleep:null,m:[],en:[],fo:[]};
+  const s={water:0,stool:0,urine:0,ex:0,priv:0,nights:0,sym:0,nap:0,sleep:null,m:[],en:[],fo:[]};
   eventsOn(k).forEach(e=>{const d=e.d||{};
     if(e.type==='water')s.water+=Number(d.n)||1;
     else if(e.type==='toilet'){if(d.type==='Stool')s.stool++;else if(d.type==='Urine')s.urine++}
     else if(e.type==='exercise')s.ex+=Number(d.min)||0;
     else if(e.type==='masturbation')s.priv++;
     else if(e.type==='symptom')s.sym++;
-    else if(e.type==='wake'){if(d.kind==='Night wake-up')s.nights++;else{const h=sleepFor(e);if(h!=null&&(s.sleep==null||h>s.sleep))s.sleep=h}}
+    else if(e.type==='wake'){if(d.kind==='Night wake-up')s.nights++;else{const h=sleepFor(e);if(h!=null){if(d.kind==='After nap / day sleep')s.nap+=h;else if(s.sleep==null||h>s.sleep)s.sleep=h}}}
     else if(e.type==='mood'){if(d.mood)s.m.push(Number(d.mood));if(d.energy)s.en.push(Number(d.energy));if(d.focus)s.fo.push(Number(d.focus))}
   });
   const av=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
@@ -284,7 +284,7 @@ function summary(k){
 function describe(e){const d=e.d||{};const j=function(){return Array.prototype.slice.call(arguments).filter(Boolean).join(', ')};
   switch(e.type){
     case 'sleep':return j('Went to sleep',d.note);
-    case 'wake':return j(d.kind==='Night wake-up'?'Night wake-up':'Morning wake-up',d.reason&&'Reason: '+d.reason,d.note);
+    case 'wake':return j(d.kind==='Night wake-up'?'Night wake-up':d.kind==='After nap / day sleep'?'Woke from nap':'Morning wake-up',d.reason&&'Reason: '+d.reason,d.note);
     case 'water':return pl(d.n||1,'glass','glasses');
     case 'food':return j(d.meal,d.items);
     case 'toilet':return j(d.type,d.urge&&'Urge: '+d.urge,d.pain&&'Pain: '+d.pain,d.form,d.colour,d.note);
@@ -333,6 +333,7 @@ function render(){
   let nowHtml='';
   if(cur===today){const n=new Date();nowHtml='<i class="now" style="left:'+((n.getHours()*60+n.getMinutes())/1440*100).toFixed(2)+'%"></i>'}
   const sl=s.sleep!=null?'Slept <b>'+fmtH(s.sleep)+'</b>.':'No sleep recorded.';
+  const np=s.nap?' Napped <b>'+fmtH(s.nap)+'</b>.':'';
   const wt='<b>'+pl(s.water,'glass','glasses')+'</b> of water.';
   const md=s.mood!=null?' Mood <b>'+s.mood.toFixed(1)+'</b> out of 5.':'';
   const sy=s.sym?' <b>'+pl(s.sym,'symptom')+'</b> logged.':' No symptoms logged.';
@@ -340,7 +341,7 @@ function render(){
     '<div class="rail"><div class="lanes"><span>Intake</span><span>Body</span><span>Mind</span></div>'+
     '<div class="plot">'+dots+nowHtml+'</div>'+
     '<div class="hours"><span style="left:0">12a</span><span style="left:25%">6a</span><span style="left:50%">12p</span><span style="left:75%">6p</span></div></div>'+
-    '<p class="sum">'+sl+' '+wt+md+sy+'</p>'+
+    '<p class="sum">'+sl+np+' '+wt+md+sy+'</p>'+
     '<p class="sum2">Stool '+s.stool+', urine '+s.urine+', exercise '+s.ex+' min, '+pl(s.nights,'night wake-up')+'.</p>';
 
   $('#pad').innerHTML=PAD.map(t=>'<button class="cell" data-t="'+t+'">'+ico(t,25)+'<span>'+esc(T[t].s)+'</span>'+(t==='water'?'<small>'+pl(s.water,'glass','glasses')+'</small>':'')+'</button>').join('');
@@ -377,7 +378,9 @@ function closeAll(){ov.classList.remove('on');form=null;document.body.style.over
 function guessKind(){
   const now=Date.now(),h=new Date().getHours();
   const ls=db.events.filter(e=>e.type==='sleep'&&e.ts<=now).sort((a,b)=>b.ts-a.ts)[0];
-  if(ls){const hrs=(now-ls.ts)/36e5;if(hrs<18)return(hrs>=5&&h>=4)?'Morning (final)':'Night wake-up'}
+  if(ls){const hrs=(now-ls.ts)/36e5;
+    if(hrs<18){const sh=new Date(ls.ts).getHours();if(sh>=10&&sh<20)return 'After nap / day sleep';
+      return(hrs>=5&&h>=4)?'Morning (final)':'Night wake-up'}}
   return(h>=4&&h<12)?'Morning (final)':'Night wake-up';
 }
 function openForm(type){
