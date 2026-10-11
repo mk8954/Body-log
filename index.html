@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Body Log</title>
+<meta name="description" content="Private journal for sleep, food, water, toilet, symptoms, mood and daily activity">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ecefec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a110f" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Body Log">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --paper:#ecefec;--surface:#f8f9f7;--ink:#17231f;--mut:#64736d;--line:#d6ddd8;
+  --panel:#0f1f1b;--panel-ink:#e9f1ee;--panel-mut:#8fa49d;
+  --btn:#12493f;--onbtn:#f4faf8;--amber:#e8a838;
+  --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Palatino,"Noto Serif",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#0a110f;--surface:#121b18;--ink:#e7eeeb;--mut:#8a9a94;--line:#212e29;
+  --panel:#0d1a16;--btn:#59cdb4;--onbtn:#04201a}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top)}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--btn);outline-offset:2px}
+#app{max-width:560px;margin:0 auto;padding:10px 18px calc(44px + env(safe-area-inset-bottom))}
+
+.top{display:flex;align-items:center;justify-content:space-between;padding:4px 0 20px}
+.brand{display:flex;align-items:center;gap:8px;font:600 17px var(--serif)}
+.brand svg{color:var(--btn)}
+.ibtn{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;color:var(--ink)}
+.ibtn:disabled{opacity:.3}
+
+.dayhead{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:18px}
+.dayhead h1{font:500 42px/1 var(--serif);margin:0;letter-spacing:-.02em}
+.dayhead p{margin:7px 0 0;color:var(--mut)}
+.link{background:none;border:0;color:var(--btn);font-weight:600;padding:0 0 0 10px}
+.nav{display:flex;gap:8px}
+
+.panel{background:var(--panel);color:var(--panel-ink);border-radius:22px;padding:18px 16px 18px;margin-bottom:28px;border:1px solid rgba(255,255,255,.05)}
+.rail{display:grid;grid-template-columns:48px 1fr;column-gap:4px;margin-bottom:16px}
+.lanes{display:grid;grid-template-rows:repeat(3,28px);align-items:center;font-size:12px;color:var(--panel-mut)}
+.plot{position:relative;height:84px;background-image:linear-gradient(to right,rgba(255,255,255,.1) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.07) 1px,transparent 1px);background-size:25% 100%,100% 28px;border-bottom:1px solid rgba(255,255,255,.2)}
+.dot{position:absolute;width:11px;height:11px;margin:-5.5px 0 0 -5.5px;border-radius:50%;box-shadow:0 0 0 2px var(--panel)}
+.now{position:absolute;top:-4px;bottom:0;width:2px;margin-left:-1px;background:var(--amber);border-radius:1px}
+.hours{grid-column:2;position:relative;height:18px;margin-top:6px;font-size:11.5px;color:var(--panel-mut)}
+.hours span{position:absolute;transform:translateX(-50%)}
+.hours span:first-child{transform:none}
+.sum{margin:0;line-height:1.65}
+.sum b{font-weight:650;color:#fff}
+.sum2{margin:6px 0 0;color:var(--panel-mut);font-size:13.5px}
+
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 10px}
+.sec h2{margin:0;font:600 20px var(--serif)}
+.sec span{color:var(--mut);font-size:13px}
+
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:20px;overflow:hidden;margin-bottom:30px}
+.cell{background:var(--surface);border:0;padding:17px 4px 14px;display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--ink);font-size:13.5px;font-weight:550}
+.cell svg{color:var(--btn)}
+.cell small{display:block;font-weight:400;color:var(--mut);font-size:12px;margin-top:-5px}
+.cell:active{background:var(--paper)}
+
+.tl{list-style:none;margin:0;padding:0}
+.ent{display:grid;grid-template-columns:64px 1fr 34px;column-gap:10px;padding:13px 0;border-top:1px solid var(--line)}
+.ent:first-child{border-top:0}
+.ent time{color:var(--mut);font-size:13px;padding-top:1px;font-variant-numeric:tabular-nums}
+.ent .bd{border-left:3px solid var(--c);padding-left:12px;min-width:0}
+.ent b{font-weight:600}
+.ent p{margin:2px 0 0;color:var(--mut);font-size:14px;word-break:break-word}
+.del{background:none;border:0;color:var(--mut);opacity:.7;align-self:start;display:grid;place-items:center;width:34px;height:34px;border-radius:10px}
+.empty{padding:26px 14px;text-align:center;color:var(--mut);border:1px dashed var(--line);border-radius:16px}
+
+.ov{position:fixed;inset:0;z-index:10;display:none;align-items:flex-end;justify-content:center;background:rgba(8,16,14,.55);backdrop-filter:blur(3px)}
+.ov.on{display:flex;animation:fade .2s ease-out}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92vh;display:flex;flex-direction:column;border-radius:26px 26px 0 0;padding:10px 18px calc(16px + env(safe-area-inset-bottom));animation:up .28s cubic-bezier(.2,.8,.2,1)}
+.grab{flex:none;width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 16px}
+.sh-head{flex:none;display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.sh-head h2{margin:0;font:600 24px var(--serif)}
+.sh-dot{width:12px;height:12px;border-radius:50%;background:var(--c)}
+.sh-body{flex:1;overflow:auto;padding:0 2px}
+.f{margin-bottom:18px}
+.f label{display:block;font-size:13px;color:var(--mut);margin-bottom:8px;font-weight:600}
+.f input,.f textarea{width:100%;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:12px;padding:12px;font:inherit}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:9px 14px;font-size:14.5px}
+.chip.on{background:var(--btn);border-color:var(--btn);color:var(--onbtn);font-weight:600}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.scale .chip{padding:13px 0;text-align:center;font:600 17px var(--serif)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bar{flex:none;display:flex;gap:10px;padding-top:12px}
+.btn{flex:1;display:flex;align-items:center;justify-content:center;text-align:center;border:1px solid var(--btn);border-radius:14px;padding:15px;font-size:16px;font-weight:600;background:var(--btn);color:var(--onbtn)}
+.btn.main{flex:2}
+.btn.sec{background:var(--paper);color:var(--ink);border:1px solid var(--line)}
+.mrow{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:14px 2px;color:var(--ink)}
+.mrow svg{color:var(--btn);flex:none}
+.mrow b{display:block;font-weight:600}
+.mrow small{color:var(--mut);font-size:13px}
+.note{color:var(--mut);font-size:13px;margin:12px 2px 4px}
+
+.toast{position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translate(-50%,16px);opacity:0;pointer-events:none;background:#17231f;color:#fff;padding:12px 16px;border-radius:14px;z-index:40;max-width:92%;font-size:14.5px;box-shadow:0 12px 30px -8px rgba(0,0,0,.5);transition:opacity .22s,transform .22s;display:flex;gap:16px;align-items:center}
+.toast.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.toast button{background:none;border:0;color:#7ee8d2;font-weight:700;padding:0}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes up{from{transform:translateY(40px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.ov.on,.sheet,.toast{animation:none;transition:none}}
+
+#report{display:none;background:#fff;color:#000;font:12px/1.35 system-ui,Arial,sans-serif}
+@media print{
+  body{background:#fff;padding:0}
+  #app,.ov,.toast{display:none!important}
+  #report{display:block}
+  #report h1{font:600 22px Georgia,serif;margin:0 0 2px}
+  #report .sub{margin:0 0 10px;color:#444}
+  #report .ovr{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 12px;border:1px solid #999;padding:8px;margin-bottom:12px}
+  #report section{margin-bottom:14px}
+  #report h2{font-size:14px;margin:0 0 2px;border-bottom:1px solid #333}
+  #report .sum{margin:2px 0 4px;color:#333}
+  #report table{width:100%;border-collapse:collapse}
+  #report td{border-bottom:1px solid #ddd;padding:2px 4px;vertical-align:top}
+  #report tr{break-inside:avoid}
+  #report .tm{width:62px;white-space:nowrap}
+  #report .ty{width:120px;white-space:nowrap}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="top">
+    <div class="brand"><svg id="brandmark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>Body Log</div>
+    <button class="ibtn" id="menu" aria-label="Export and backup"></button>
+  </div>
+  <div class="dayhead">
+    <div><h1 id="dow"></h1><p id="dfull"></p></div>
+    <div class="nav"><button class="ibtn" id="prev" aria-label="Previous day"></button><button class="ibtn" id="next" aria-label="Next day"></button></div>
+  </div>
+  <section class="panel" id="panel" aria-label="Day summary"></section>
+  <div class="sec"><h2>Log</h2></div>
+  <div class="pad" id="pad"></div>
+  <div class="sec"><h2>Entries</h2><span id="cnt"></span></div>
+  <ul class="tl" id="tl"></ul>
+</div>
+<div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<div id="report"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const pl=(n,a,b)=>n+' '+(n===1?a:(b||a+'s'));
+const dayKey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const parseKey=k=>{const p=k.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+const timeStr=ts=>{const d=new Date(ts);let h=d.getHours();const ap=h>=12?'PM':'AM';h=h%12||12;return h+':'+pad(d.getMinutes())+' '+ap};
+const hhmm=ts=>{const d=new Date(ts);return pad(d.getHours())+':'+pad(d.getMinutes())};
+const dayLabel=k=>parseKey(k).toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+const addDays=(k,n)=>{const d=parseKey(k);d.setDate(d.getDate()+n);return dayKey(d.getTime())};
+const localInput=ts=>dayKey(ts)+'T'+hhmm(ts);
+const fmtH=h=>{const m=Math.round(h*60);return Math.floor(m/60)+'h '+pad(m%60)+'m'};
+
+/* ---------- icons ---------- */
+const ICON={
+  sleep:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
+  wake:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  water:'<path d="M12 2.7s6 6.2 6 10.8a6 6 0 0 1-12 0C6 8.9 12 2.7 12 2.7z"/>',
+  food:'<path d="M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10"/><path d="M17 21V3c-2.5 1.6-4 4.6-4 8h4"/>',
+  toilet:'<path d="M7 3h10v6H7z"/><path d="M5 9h14v2a7 7 0 0 1-14 0z"/><path d="M10 20h4"/>',
+  symptom:'<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>',
+  exercise:'<path d="M6 7v10M3 9v6M18 7v10M21 9v6M6 12h12"/>',
+  mood:'<circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/>',
+  thought:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  activity:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9zM9 14l2 2 4-4"/>',
+  note:'<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+  masturbation:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  left:'<path d="M15 5l-7 7 7 7"/>',
+  right:'<path d="M9 5l7 7-7 7"/>',
+  download:'<path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/>',
+  upload:'<path d="M12 16V4m0 0L8 8m4-4l4 4M5 20h14"/>',
+  file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+  table:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/>',
+  shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+  folder:'<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+  phone:'<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>'
+};
+const ico=(n,s)=>'<svg width="'+(s||22)+'" height="'+(s||22)+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ICON[n]+'</svg>';
+
+/* ---------- storage ---------- */
+const KEY='bodylog.v1';
+let db=(function(){try{const j=JSON.parse(localStorage.getItem(KEY));if(j&&Array.isArray(j.events))return j}catch(e){}return{events:[]}})();
+function save(){try{localStorage.setItem(KEY,JSON.stringify(db))}catch(e){alert('Could not save. Storage may be full or blocked. Export a backup now.')}}
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+
+/* ---------- types & forms ---------- */
+const T={
+  sleep:{n:'Going to sleep',s:'Sleep',c:'#8d9bff'},
+  wake:{n:'Woke up',s:'Wake up',c:'#f2b84b'},
+  water:{n:'Water',s:'Water',c:'#5bb8f0'},
+  food:{n:'Food',s:'Food',c:'#f08a5d'},
+  toilet:{n:'Toilet',s:'Toilet',c:'#c4a484'},
+  symptom:{n:'Stomach / symptom',s:'Symptom',c:'#ff6b81'},
+  exercise:{n:'Exercise',s:'Exercise',c:'#5fd08f'},
+  mood:{n:'Mood',s:'Mood',c:'#ff8cc6'},
+  thought:{n:'Sudden thought',s:'Thought',c:'#b79cff'},
+  activity:{n:'Activity',s:'Activity',c:'#4fd1c1'},
+  note:{n:'Note',s:'Note',c:'#9fb3ad'},
+  masturbation:{n:'Private',s:'Private',c:'#9aa7b5'}
+};
+const LANE={food:0,water:0,toilet:1,symptom:1,exercise:1,masturbation:1,sleep:2,wake:2,mood:2,thought:2,activity:2,note:2};
+const PAD=['sleep','wake','water','food','toilet','symptom','exercise','mood','thought','activity','note','masturbation'];
+const SC=['1','2','3','4','5'];
+const F={
+  sleep:{t:'Going to sleep',f:[{k:'note',l:'Anything on your mind? (optional)',t:'text'}]},
+  wake:{t:'Woke up',f:[
+    {k:'kind',l:'Which wake-up?',t:'chips',o:['Night wake-up','Morning (final)'],r:1},
+    {k:'reason',l:'Why did you wake up?',t:'chips',o:['Urine','Thirst','Heat/cold','Noise','Bad dream','Worry/thoughts','Pain/discomfort','Hunger','No reason']},
+    {k:'note',l:'Details (optional)',t:'text'}]},
+  food:{t:'Food',f:[
+    {k:'meal',l:'Meal',t:'chips',o:['Breakfast','Lunch','Snack','Dinner','Tea/Coffee','Other']},
+    {k:'items',l:'Items and quantity',t:'area',r:1,p:'e.g. 2 roti, 1 bowl dal, 1 glass milk'}]},
+  toilet:{t:'Toilet',f:[
+    {k:'type',l:'What',t:'chips',o:['Stool','Urine'],r:1},
+    {k:'urge',l:'Urge',t:'chips',o:['Normal','Strong/urgent','Weak/had to push','No urge (habit)']},
+    {k:'pain',l:'Pain',t:'chips',o:['None','Mild','Severe','Burning']},
+    {k:'form',l:'Stool type',t:'chips',o:['Hard','Normal','Loose','Watery'],show:v=>v.type==='Stool'},
+    {k:'colour',l:'Urine colour',t:'chips',o:['Clear','Light yellow','Dark yellow','Other'],show:v=>v.type==='Urine'},
+    {k:'note',l:'Note (optional)',t:'text'}]},
+  symptom:{t:'Stomach / symptom',f:[
+    {k:'type',l:'What is it?',t:'chips',o:['Acidity/burning','Gas','Bloating','Stomach pain','Cramps','Nausea','Vomiting','Loose motion','Constipation','Headache','Body pain','Other'],r:1},
+    {k:'sev',l:'How bad? (1 mild – 5 severe)',t:'scale',o:SC,r:1},
+    {k:'suspect',l:'What do you think caused it? (optional)',t:'text'},
+    {k:'note',l:'Note (optional)',t:'text'}]},
+  exercise:{t:'Exercise',f:[
+    {k:'type',l:'Type',t:'chips',o:['Walk','Run','Workout','Yoga/Stretch','Sports','Other'],r:1},
+    {k:'min',l:'Minutes',t:'num'},
+    {k:'note',l:'Note (optional)',t:'text'}]},
+  mood:{t:'Mood',f:[
+    {k:'mood',l:'Mood (1 low – 5 high)',t:'scale',o:SC,r:1},
+    {k:'energy',l:'Energy (1 low – 5 high)',t:'scale',o:SC},
+    {k:'focus',l:'Focus (1 low – 5 high)',t:'scale',o:SC},
+    {k:'swing',l:'Type',t:'chips',o:['Steady','Sudden swing']},
+    {k:'reason',l:'Why do I feel this?',t:'text'}]},
+  thought:{t:'Sudden thought',f:[
+    {k:'thought',l:'The thought',t:'area',r:1},
+    {k:'feel',l:'It feels',t:'chips',o:['Positive','Neutral','Negative','Disturbing']},
+    {k:'reason',l:'What triggered it, or why now?',t:'text'}]},
+  activity:{t:'Activity',f:[
+    {k:'act',l:'What',t:'chips',o:['Study','Tuition','Office work','Reached office','Left office','Watched web series','Watched movie/YouTube','Reels/scrolling','Gaming','Chatting/calls','Travel','Household','Other'],r:1},
+    {k:'detail',l:'Details (which series, which subject)',t:'text'},
+    {k:'min',l:'Minutes (optional)',t:'num'},
+    {k:'trouble',l:'Anything that troubled me',t:'text'}]},
+  note:{t:'Note',f:[{k:'text',l:'What happened?',t:'area',r:1,p:'Anything worth remembering'}]},
+  masturbation:{t:'Private',f:[
+    {k:'reason',l:'Reason or trigger',t:'chips',o:['Habit','Boredom','Stress','Urge','Content trigger','Cannot sleep','Other'],r:1},
+    {k:'after',l:'How I felt after',t:'chips',o:['Fine','Relaxed','Tired','Guilty','Empty']},
+    {k:'note',l:'Note (optional)',t:'text'}]}
+};
+
+/* ---------- helpers ---------- */
+let cur=dayKey(Date.now());
+const eventsOn=k=>db.events.filter(e=>dayKey(e.ts)===k);
+function sleepFor(w){let best=null;for(const e of db.events){if(e.type==='sleep'&&e.ts<w.ts&&w.ts-e.ts<18*36e5&&(!best||e.ts>best.ts))best=e}return best?(w.ts-best.ts)/36e5:null}
+function summary(k){
+  const s={water:0,stool:0,urine:0,ex:0,priv:0,nights:0,sym:0,sleep:null,m:[],en:[],fo:[]};
+  eventsOn(k).forEach(e=>{const d=e.d||{};
+    if(e.type==='water')s.water+=Number(d.n)||1;
+    else if(e.type==='toilet'){if(d.type==='Stool')s.stool++;else if(d.type==='Urine')s.urine++}
+    else if(e.type==='exercise')s.ex+=Number(d.min)||0;
+    else if(e.type==='masturbation')s.priv++;
+    else if(e.type==='symptom')s.sym++;
+    else if(e.type==='wake'){if(d.kind==='Night wake-up')s.nights++;else{const h=sleepFor(e);if(h!=null&&(s.sleep==null||h>s.sleep))s.sleep=h}}
+    else if(e.type==='mood'){if(d.mood)s.m.push(Number(d.mood));if(d.energy)s.en.push(Number(d.energy));if(d.focus)s.fo.push(Number(d.focus))}
+  });
+  const av=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null;
+  s.mood=av(s.m);s.energy=av(s.en);s.focus=av(s.fo);return s;
+}
+function describe(e){const d=e.d||{};const j=function(){return Array.prototype.slice.call(arguments).filter(Boolean).join(', ')};
+  switch(e.type){
+    case 'sleep':return j('Went to sleep',d.note);
+    case 'wake':return j(d.kind==='Night wake-up'?'Night wake-up':'Morning wake-up',d.reason&&'Reason: '+d.reason,d.note);
+    case 'water':return pl(d.n||1,'glass','glasses');
+    case 'food':return j(d.meal,d.items);
+    case 'toilet':return j(d.type,d.urge&&'Urge: '+d.urge,d.pain&&'Pain: '+d.pain,d.form,d.colour,d.note);
+    case 'symptom':return j(d.type,d.sev&&'Severity '+d.sev+' of 5',d.suspect&&'Suspect: '+d.suspect,d.note);
+    case 'exercise':return j(d.type,d.min&&d.min+' min',d.note);
+    case 'masturbation':return j(d.reason&&'Reason: '+d.reason,d.after&&'After: '+d.after,d.note);
+    case 'mood':return j('Mood '+d.mood+' of 5',d.energy&&'Energy '+d.energy,d.focus&&'Focus '+d.focus,d.swing,d.reason&&'Reason: '+d.reason);
+    case 'thought':return j(d.thought,d.feel,d.reason&&'Reason: '+d.reason);
+    case 'activity':return j(d.act,d.detail,d.min&&d.min+' min',d.trouble&&'Troubled me: '+d.trouble);
+    case 'note':return d.text||'';
+  }return '';
+}
+const buzz=()=>{try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}};
+
+/* ---------- toast ---------- */
+let tt;
+function toast(msg,label,fn){
+  const t=$('#toast');
+  t.innerHTML='<span>'+esc(msg)+'</span>'+(label?'<button id="tact">'+esc(label)+'</button>':'');
+  t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),label?5000:3000);
+  if(label)$('#tact').onclick=()=>{t.classList.remove('on');fn()};
+}
+
+/* ---------- add / render ---------- */
+function add(type,d,ts){
+  ts=ts||Date.now();
+  const id=ts.toString(36)+Math.random().toString(36).slice(2,6);
+  db.events.push({id:id,ts:ts,type:type,d:d});
+  save();cur=dayKey(ts);render();buzz();autoBackup();return id;
+}
+function render(){
+  const today=dayKey(Date.now());
+  const d=parseKey(cur);
+  const rel=cur===today?'Today, ':cur===addDays(today,-1)?'Yesterday, ':'';
+  $('#dow').textContent=d.toLocaleDateString('en-IN',{weekday:'long'});
+  $('#dfull').innerHTML=esc(rel+d.toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'}))+(cur===today?'':'<button class="link" id="today">Back to today</button>');
+  $('#next').disabled=cur>=today;
+  const s=summary(cur);
+  const ev=eventsOn(cur).sort((a,b)=>a.ts-b.ts);
+
+  let dots='';
+  ev.forEach(e=>{
+    const m=new Date(e.ts);const pct=((m.getHours()*60+m.getMinutes())/1440*100).toFixed(2);
+    dots+='<i class="dot" title="'+esc(T[e.type].n+' at '+timeStr(e.ts))+'" style="left:'+pct+'%;top:'+(14+LANE[e.type]*28)+'px;background:'+T[e.type].c+'"></i>';
+  });
+  let nowHtml='';
+  if(cur===today){const n=new Date();nowHtml='<i class="now" style="left:'+((n.getHours()*60+n.getMinutes())/1440*100).toFixed(2)+'%"></i>'}
+  const sl=s.sleep!=null?'Slept <b>'+fmtH(s.sleep)+'</b>.':'No sleep recorded.';
+  const wt='<b>'+pl(s.water,'glass','glasses')+'</b> of water.';
+  const md=s.mood!=null?' Mood <b>'+s.mood.toFixed(1)+'</b> out of 5.':'';
+  const sy=s.sym?' <b>'+pl(s.sym,'symptom')+'</b> logged.':' No symptoms logged.';
+  $('#panel').innerHTML=
+    '<div class="rail"><div class="lanes"><span>Intake</span><span>Body</span><span>Mind</span></div>'+
+    '<div class="plot">'+dots+nowHtml+'</div>'+
+    '<div class="hours"><span style="left:0">12a</span><span style="left:25%">6a</span><span style="left:50%">12p</span><span style="left:75%">6p</span></div></div>'+
+    '<p class="sum">'+sl+' '+wt+md+sy+'</p>'+
+    '<p class="sum2">Stool '+s.stool+', urine '+s.urine+', exercise '+s.ex+' min, '+pl(s.nights,'night wake-up')+'.</p>';
+
+  $('#pad').innerHTML=PAD.map(t=>'<button class="cell" data-t="'+t+'">'+ico(t,25)+'<span>'+esc(T[t].s)+'</span>'+(t==='water'?'<small>'+pl(s.water,'glass','glasses')+'</small>':'')+'</button>').join('');
+
+  $('#cnt').textContent=ev.length?pl(ev.length,'entry','entries'):'';
+  const list=ev.slice().reverse();
+  $('#tl').innerHTML=list.length?list.map(e=>'<li class="ent"><time>'+timeStr(e.ts)+'</time><div class="bd" style="--c:'+T[e.type].c+'"><b>'+esc(T[e.type].n)+'</b><p>'+esc(describe(e))+'</p></div><button class="del" data-del="'+e.id+'" aria-label="Delete '+esc(T[e.type].n)+' entry">'+ico('x',16)+'</button></li>').join(''):
+    '<li class="empty">'+(cur===today?'Nothing logged yet. Tap a button above to add your first entry.':'No entries on this day.')+'</li>';
+}
+$('#menu').innerHTML=ico('download',20);
+$('#prev').innerHTML=ico('left',18);
+$('#next').innerHTML=ico('right',18);
+$('#pad').addEventListener('click',e=>{
+  const b=e.target.closest('.cell');if(!b)return;const t=b.dataset.t;
+  if(t==='water'){const id=add('water',{n:1});toast('Water added','Undo',()=>{db.events=db.events.filter(x=>x.id!==id);save();render()})}
+  else openForm(t);
+});
+$('#tl').addEventListener('click',e=>{
+  const b=e.target.closest('[data-del]');if(!b)return;
+  const id=b.dataset.del;const ev=db.events.find(x=>x.id===id);if(!ev)return;
+  db.events=db.events.filter(x=>x.id!==id);save();render();
+  toast('Entry deleted','Undo',()=>{db.events.push(ev);save();render()});
+});
+$('#prev').onclick=()=>{cur=addDays(cur,-1);render()};
+$('#next').onclick=()=>{cur=addDays(cur,1);render()};
+document.addEventListener('click',e=>{if(e.target.id==='today'){cur=dayKey(Date.now());render()}});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){cur=dayKey(Date.now());render()}});
+
+/* ---------- form sheet ---------- */
+const sheet=$('#sheet'),ov=$('#ov');
+let form=null,vals={},initTime='';
+function openSheet(){ov.classList.add('on');document.body.style.overflow='hidden'}
+function closeAll(){ov.classList.remove('on');form=null;document.body.style.overflow=''}
+function guessKind(){
+  const now=Date.now(),h=new Date().getHours();
+  const ls=db.events.filter(e=>e.type==='sleep'&&e.ts<=now).sort((a,b)=>b.ts-a.ts)[0];
+  if(ls){const hrs=(now-ls.ts)/36e5;if(hrs<18)return(hrs>=5&&h>=4)?'Morning (final)':'Night wake-up'}
+  return(h>=4&&h<12)?'Morning (final)':'Night wake-up';
+}
+function openForm(type){
+  form={type:type,cfg:F[type]};vals={};
+  if(type==='wake')vals.kind=guessKind();
+  initTime=localInput(Date.now());vals._time=initTime;
+  renderForm();openSheet();
+}
+function renderForm(){
+  const cfg=form.cfg,t=T[form.type];
+  const old=sheet.querySelector('.sh-body');const st=old?old.scrollTop:0;
+  let h='<div class="grab"></div><div class="sh-head" style="--c:'+t.c+'"><span class="sh-dot"></span><h2>'+esc(cfg.t)+'</h2></div><div class="sh-body">';
+  cfg.f.forEach(f=>{
+    if(f.show&&!f.show(vals))return;
+    h+='<div class="f"><label>'+esc(f.l)+(f.r?' *':'')+'</label>';
+    if(f.t==='chips')h+='<div class="chips">'+f.o.map(o=>'<button type="button" class="chip'+(vals[f.k]===o?' on':'')+'" data-k="'+f.k+'" data-v="'+esc(o)+'">'+esc(o)+'</button>').join('')+'</div>';
+    else if(f.t==='scale')h+='<div class="scale">'+f.o.map((o,i)=>'<button type="button" class="chip'+(vals[f.k]===i+1?' on':'')+'" data-k="'+f.k+'" data-num="'+(i+1)+'">'+esc(o)+'</button>').join('')+'</div>';
+    else if(f.t==='area')h+='<textarea rows="3" data-in="'+f.k+'" placeholder="'+esc(f.p||'')+'">'+esc(vals[f.k]||'')+'</textarea>';
+    else if(f.t==='num')h+='<input type="number" inputmode="numeric" min="0" data-in="'+f.k+'" value="'+esc(vals[f.k]||'')+'">';
+    else h+='<input type="text" data-in="'+f.k+'" value="'+esc(vals[f.k]||'')+'">';
+    h+='</div>';
+  });
+  h+='<div class="f"><label>When (leave as is for now)</label><input type="datetime-local" data-in="_time" value="'+esc(vals._time)+'"></div></div>';
+  h+='<div class="bar"><button class="btn sec" id="cancel">Cancel</button><button class="btn main" id="save">Save</button></div>';
+  sheet.innerHTML=h;
+  const nb=sheet.querySelector('.sh-body');if(nb)nb.scrollTop=st;
+}
+function saveForm(){
+  const cfg=form.cfg;
+  for(const f of cfg.f){
+    if(f.show&&!f.show(vals))continue;
+    if(f.r&&(vals[f.k]===undefined||String(vals[f.k]).trim()==='')){toast('Fill in “'+f.l.replace(/\s*\(.*\)/,'').trim()+'” to save');return}
+  }
+  const d={};
+  cfg.f.forEach(f=>{if(f.show&&!f.show(vals))return;const v=vals[f.k];if(v!==undefined&&String(v).trim()!=='')d[f.k]=typeof v==='string'?v.trim():v});
+  let ts=Date.now();
+  if(vals._time&&vals._time!==initTime){const t=new Date(vals._time).getTime();if(!isNaN(t))ts=t}
+  const type=form.type;
+  add(type,d,ts);closeAll();
+}
+ov.addEventListener('click',e=>{if(e.target===ov)closeAll()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll()});
+sheet.addEventListener('input',e=>{const k=e.target.dataset.in;if(k&&form)vals[k]=e.target.value});
+sheet.addEventListener('click',e=>{
+  if(!form)return;
+  const c=e.target.closest('.chip');
+  if(c){const k=c.dataset.k;const v=c.dataset.num?Number(c.dataset.num):c.dataset.v;if(vals[k]===v)delete vals[k];else vals[k]=v;renderForm();return}
+  if(e.target.id==='save')saveForm();
+  if(e.target.id==='cancel')closeAll();
+});
+
+/* ---------- download / backup ---------- */
+function download(name,text,mime){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:mime}));a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('bodylog',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+async function kvGet(k){try{const d=await idb();return await new Promise(res=>{const q=d.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null)})}catch(e){return null}}
+async function kvSet(k,v){const d=await idb();return new Promise((res,rej)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+async function doBackup(){
+  const name='bodylog-backup-'+dayKey(Date.now())+'.json';
+  const text=JSON.stringify(db);
+  const h=await kvGet('dir');
+  if(h){
+    try{
+      if((await h.queryPermission({mode:'readwrite'}))!=='granted'&&(await h.requestPermission({mode:'readwrite'}))!=='granted')throw 0;
+      const fh=await h.getFileHandle(name,{create:true});const w=await fh.createWritable();await w.write(text);await w.close();
+      return 'your chosen folder';
+    }catch(e){}
+  }
+  download(name,text,'application/json');
+  return 'Downloads folder';
+}
+async function autoBackup(){
+  const today=dayKey(Date.now());
+  let last=null;try{last=JSON.parse(localStorage.getItem('bodylog.lastBackup'))}catch(e){}
+  if(last&&last.day===today)return;
+  try{const where=await doBackup();localStorage.setItem('bodylog.lastBackup',JSON.stringify({day:today,where:where}))}catch(e){}
+}
+
+/* ---------- CSV ---------- */
+function exportCSV(){
+  const keys=[...new Set(db.events.flatMap(e=>Object.keys(e.d||{})))];
+  const rows=[['date','time','weekday','type'].concat(keys)];
+  db.events.slice().sort((a,b)=>a.ts-b.ts).forEach(e=>rows.push([dayKey(e.ts),hhmm(e.ts),parseKey(dayKey(e.ts)).toLocaleDateString('en-US',{weekday:'long'}),e.type].concat(keys.map(k=>(e.d||{})[k]==null?'':e.d[k]))));
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  download('bodylog-'+dayKey(Date.now())+'.csv','﻿'+csv,'text/csv');
+}
+
+/* ---------- PDF (print to PDF) ---------- */
+function sumLine(s){
+  const r=x=>x==null?'–':(Math.round(x*10)/10);
+  return 'Sleep '+(s.sleep!=null?fmtH(s.sleep):'–')+' | Night wake-ups '+s.nights+' | Symptoms '+s.sym+' | Water '+s.water+' glasses | Stool '+s.stool+' | Urine '+s.urine+' | Exercise '+s.ex+' min | Mood '+r(s.mood)+' | Energy '+r(s.energy)+' | Focus '+r(s.focus);
+}
+function buildReport(from,to){
+  const days=[...new Set(db.events.map(e=>dayKey(e.ts)))].filter(k=>k>=from&&k<=to).sort();
+  if(!days.length){toast('No entries in those dates');return false}
+  const S=days.map(summary);
+  const A=f=>{const a=S.map(f).filter(x=>x!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:null};
+  const r1=x=>x==null?'–':String(Math.round(x*10)/10);
+  const ovr=[['Avg sleep',A(s=>s.sleep)==null?'–':fmtH(A(s=>s.sleep))],['Water / day',r1(A(s=>s.water))+' glasses'],['Night wake-ups / day',r1(A(s=>s.nights))],['Symptoms / day',r1(A(s=>s.sym))],
+    ['Stool / day',r1(A(s=>s.stool))],['Urine / day',r1(A(s=>s.urine))],['Exercise / day',r1(A(s=>s.ex))+' min'],
+    ['Avg mood',r1(A(s=>s.mood))+' / 5'],['Avg energy',r1(A(s=>s.energy))+' / 5'],['Avg focus',r1(A(s=>s.focus))+' / 5']];
+  let h='<h1>Body Log report</h1><p class="sub">'+esc(dayLabel(days[0]))+' to '+esc(dayLabel(days[days.length-1]))+', '+pl(days.length,'day')+' logged</p>';
+  h+='<div class="ovr">'+ovr.map(o=>'<div><b>'+esc(o[0])+':</b> '+esc(o[1])+'</div>').join('')+'</div>';
+  days.forEach((k,i)=>{
+    const ev=eventsOn(k).sort((a,b)=>a.ts-b.ts);
+    h+='<section><h2>'+esc(dayLabel(k))+'</h2><p class="sum">'+esc(sumLine(S[i]))+'</p><table>'+
+      ev.map(e=>'<tr><td class="tm">'+timeStr(e.ts)+'</td><td class="ty">'+esc(T[e.type].n)+'</td><td>'+esc(describe(e))+'</td></tr>').join('')+'</table></section>';
+  });
+  $('#report').innerHTML=h;return true;
+}
+window.addEventListener('afterprint',()=>{$('#report').innerHTML=''});
+
+/* ---------- install ---------- */
+let deferred=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e});
+window.addEventListener('appinstalled',()=>{deferred=null});
+
+/* ---------- menu ---------- */
+function showMenu(){
+  form=null;
+  const today=dayKey(Date.now());
+  let last=null;try{last=JSON.parse(localStorage.getItem('bodylog.lastBackup'))}catch(e){}
+  const canDir=typeof window.showDirectoryPicker==='function';
+  const row=(id,ic,t,s)=>'<button class="mrow" id="'+id+'">'+ico(ic,22)+'<span><b>'+t+'</b><small>'+s+'</small></span></button>';
+  sheet.innerHTML='<div class="grab"></div><div class="sh-head"><h2>Export &amp; backup</h2></div><div class="sh-body">'+
+    '<div class="f"><label>Report dates</label><div class="two"><input type="date" id="rf" value="'+addDays(today,-29)+'"><input type="date" id="rt" value="'+today+'"></div></div>'+
+    row('bpdf','file','PDF report','Choose “Save as PDF” in the print screen')+
+    row('bcsv','table','Export CSV','Every entry in one file, ready for analysis')+
+    row('bbak','shield','Back up now','Saves all entries as a backup file')+
+    (canDir?row('bdir','folder','Choose backup folder','Daily backups are saved here'):'')+
+    '<label class="mrow">'+ico('upload',22)+'<span><b>Restore from backup</b><small>Adds entries from a backup file</small></span><input type="file" id="brs" accept=".json,application/json" hidden></label>'+
+    (deferred?row('binst','phone','Install app','Add Body Log to your home screen'):'')+
+    '<p class="note">'+(last?'Last automatic backup: '+esc(dayLabel(last.day))+', saved to '+esc(last.where)+'. ':'No automatic backup yet. ')+
+    'A backup is saved with your first entry each day'+(canDir?'.':', to your Downloads folder.')+' '+pl(db.events.length,'entry','entries')+' stored on this device.</p></div>'+
+    '<div class="bar"><button class="btn sec" id="bcl">Close</button></div>';
+  openSheet();
+  $('#bpdf').onclick=()=>{if(buildReport($('#rf').value,$('#rt').value)){closeAll();setTimeout(()=>window.print(),200)}};
+  $('#bcsv').onclick=()=>{exportCSV();closeAll()};
+  $('#bbak').onclick=async()=>{const w=await doBackup();localStorage.setItem('bodylog.lastBackup',JSON.stringify({day:dayKey(Date.now()),where:w}));closeAll();toast('Backup saved to '+w)};
+  if(canDir)$('#bdir').onclick=async()=>{try{const h=await window.showDirectoryPicker({mode:'readwrite'});await kvSet('dir',h);closeAll();toast('Backup folder set')}catch(e){}};
+  if(deferred)$('#binst').onclick=()=>{const p=deferred;deferred=null;closeAll();p.prompt()};
+  $('#brs').onchange=async e=>{
+    const f=e.target.files[0];if(!f)return;
+    try{
+      const j=JSON.parse(await f.text());if(!Array.isArray(j.events))throw 0;
+      const ids=new Set(db.events.map(x=>x.id));let n=0;
+      j.events.forEach(x=>{if(x&&x.id&&x.ts&&T[x.type]&&!ids.has(x.id)){db.events.push(x);n++}});
+      save();render();closeAll();toast('Restored '+pl(n,'new entry','new entries'));
+    }catch(err){toast('That file is not a Body Log backup')}
+  };
+  $('#bcl').onclick=closeAll;
+}
+$('#menu').onclick=showMenu;
+
+render();
+setInterval(()=>{if(!document.hidden&&cur===dayKey(Date.now())&&!ov.classList.contains('on'))render()},60000);
+
+/* home-screen shortcuts: index.html?add=water */
+(function(){
+  const p=new URLSearchParams(location.search).get('add');if(!p)return;
+  try{history.replaceState(null,'',location.pathname)}catch(e){}
+  if(p==='water'){add('water',{n:1});toast('Water added')}
+  else if(F[p])openForm(p);
+})();
+
+if('serviceWorker' in navigator&&location.protocol.indexOf('http')===0)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
